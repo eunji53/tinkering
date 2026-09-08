@@ -1,0 +1,40 @@
+# 환경변수 / 자격증명
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+.pytest_cache/
+
+# Node
+node_modules/
+dist/
+dist-ssr/
+.vite/
+*.local
+frontend-learning/02-typescript/*.js
+
+# 실행 시 직접 채우거나 생성되는 데이터/캐시/결과물
+**/data/
+**/cache/
+**/output/
+*.xlsx
+*.xlsm
+*.pkl
+*.npy
+
+# paper-review-notion: 논문 원본 PDF와 추출 결과는 커밋하지 않음
+paper-review-notion/input/
+paper-review-notion/output/
+
+# 로그 / OS / 에디터
+*.log
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
