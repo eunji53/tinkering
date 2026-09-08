@@ -1,7 +1,7 @@
 # tinkering
 
-데이터 분석 업무를 하면서 궁금했던 주제들(LLM API, RAG, 논문 처리 파이프라인,
-프론트엔드)을 작게 구현해보며 공부한 개인 프로젝트 모음입니다.
+데이터 분석 업무를 하면서 궁금했던 주제들(LLM API, RAG, 외부 API 연동,
+논문 처리 파이프라인, 프론트엔드)을 작게 구현해보며 공부한 개인 프로젝트 모음입니다.
 프로덕션 코드가 아니라 학습·실험 목적이라 완성도는 프로젝트마다 다릅니다.
 
 ## 프로젝트
@@ -14,6 +14,8 @@
 | [paper-review-notion](./paper-review-notion) | 논문 PDF에서 텍스트·그림·표·수식을 추출 → 리뷰 초안 작성 → Notion 발행 파이프라인 | 진행 중 (1~2단계) |
 | [rag-experiments](./rag-experiments) | FAQ 검색·상품 추천에 RAG를 적용해보는 실습. TF-IDF → 임베딩(SBERT) → BM25+임베딩 하이브리드 순으로 발전 | 실습 노트북 (v0~v3) |
 | [frontend-learning](./frontend-learning) | React + TypeScript + Tailwind + shadcn/ui + React Flow 단계별 학습. 노드/엣지 다이어그램 뷰어 만들기가 최종 목표 | 진행 중 (2/7단계) |
+| [smilebiz-van](./smilebiz-van) | SMARTRO VAN API(가맹점 매출/입금 조회) 호출 테스트. 공식 문서와 다른 실제 동작(필수 파라미터, 에러 조건) 정리 | 테스트 노트북 |
+| [popbill-bank-test](./popbill-bank-test) | 팝빌 EasyFinBank(계좌 거래내역 조회) API 연동 테스트. 수집요청 → 상태 폴링 → 거래내역 조회 흐름, 응답 마스킹 유닛테스트 포함 | 테스트 노트북 + 유닛테스트 |
 
 ## 공통 참고
 
