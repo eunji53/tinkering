@@ -17,6 +17,7 @@
 | [smilebiz-van](./smilebiz-van) | SMARTRO VAN API(가맹점 매출/입금 조회) 호출 테스트. 공식 문서와 다른 실제 동작(필수 파라미터, 에러 조건) 정리 | 테스트 노트북 |
 | [popbill-bank-test](./popbill-bank-test) | 팝빌 EasyFinBank(계좌 거래내역 조회) API 연동 테스트. 수집요청 → 상태 폴링 → 거래내역 조회 흐름, 응답 마스킹 유닛테스트 포함 | 테스트 노트북 + 유닛테스트 |
 | [meeting-stt](./meeting-stt) | 회의 녹음(m4a 등)을 faster-whisper로 STT → 정해진 구조의 회의록 md 작성 → docx 템플릿에 채워 변환 | 도구 (사용 중) |
+| [voice-data-pipeline](./voice-data-pipeline) | 통화 녹음 STT(faster-whisper) → 로컬 LLM(Ollama)으로 유형 분류·요약 → 집계·시각화. 수신/발신 통화 분리 | 노트북 + 배치 스크립트 |
 
 ## 공통 참고
 

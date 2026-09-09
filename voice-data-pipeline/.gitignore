@@ -1,0 +1,15 @@
+# 통화 전사문·요약·분류 결과 / 시각화 이미지 — 커밋 금지
+data/
+output/
+*.csv
+*.json
+!*.example.json
+
+# STT/오디오
+*.m4a
+*.mp3
+*.wav
+*.mp4
+
+.ipynb_checkpoints/
+__pycache__/
