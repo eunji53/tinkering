@@ -9,26 +9,33 @@ API 가이드 문서: https://exttran.smilebiz.co.kr/ (좌측 메뉴에서 `VAN`
 
 ```
 smilebiz-van/
-└─ crawler/
-   ├─ 01_test_van_api.ipynb        # 단계별 테스트 (서버체크 → 공통코드 → 매출집계 → 매출내역)
-   └─ 02_cash_receipt_lookup.ipynb # 특정 단말기의 현금영수증 1건을 골라 반환 필드 전체 / 명세 대비 누락 필드 / 원본 JSON 확인
+└─ van-api/
+   ├─ van_test_helpers.py          # 공용 요청 함수 (Bearer 인증·페이지네이션·응답 검증). 표준 라이브러리만 사용, 노트북들이 import
+   ├─ 01_test_van_api.ipynb        # VAN 탭 8개 API 전부 GET 테스트 (서버체크·공통코드·매출집계·매출내역·입금 4종) + 결과 요약
+   ├─ 02_cash_receipt_lookup.ipynb # 현금영수증 1건을 골라 반환 필드 전체 / 명세 대비 누락 필드 / 원본 JSON 확인
+   ├─ 03_cash_receipt_fields.ipynb # 승인번호 여러 개의 현금영수증 반환 필드를 가로·세로로 비교
+   └─ 04_cash_receipt_audit.ipynb  # 기간 전체 페이지 조회 + 지정 승인번호의 기대값 vs 실제 승인·취소 대사
 ```
 
-`02_cash_receipt_lookup.ipynb`는 `01`의 공통 요청 함수를 그대로 쓰되, `getSalesSum`에는 `GBN` 요청 필드가 없어
-집계를 받은 뒤 현금영수증 행만 필터링하는 점, 카드 공통 필드가 현금영수증 응답에서 빈 값으로 오는 점 등을 확인합니다.
+`02`~`04` 노트북은 `van_test_helpers.py`의 `van_get()`/`fetch_pages()`를 그대로 씁니다.
+`getSalesSum`에는 `GBN` 요청 필드가 없어 집계를 받은 뒤 현금영수증 행만 필터링하는 점,
+카드 공통 필드가 현금영수증 응답에서 빈 값으로 오는 점 등을 확인합니다.
 
 ## 0. 환경 준비
 
 ```bash
-pip install requests python-dotenv pandas
+pip install pandas jupyter
 ```
+
+HTTP 요청은 `van_test_helpers.py`가 표준 라이브러리(`urllib`)로 처리하므로 `requests`/`python-dotenv`는 필요 없습니다.
 
 저장소 루트의 `.env.example`을 참고해 `.env`에 아래 값을 채웁니다.
 
 ```
 # .env
 SMARTRO_VAN_API_KEY=발급받은_Bearer_키
-SMARTRO_VAN_TERMID=조회할_단말기번호_10자리   # 02 노트북에서만 사용
+SMARTRO_VAN_TERMID=조회할_단말기번호_10자리   # 02·03·04 노트북에서 사용 (01은 없어도 됨)
+SMARTRO_VAN_COMP_NO=사업자번호                # (선택) 특정 가맹점만 좁혀 조회할 때. 비우면 사업자 전체 범위
 ```
 
 키는 API 가이드 사이트에서 발급/확인하셔야 합니다 (이 저장소나 노트북이 발급을 대신 해주지 않습니다).
@@ -66,9 +73,9 @@ SMARTRO_VAN_TERMID=조회할_단말기번호_10자리   # 02 노트북에서만 
 
 ## 3. 실행
 
-`crawler/01_test_van_api.ipynb` 또는 `crawler/02_cash_receipt_lookup.ipynb`를 열어 셀을 하나씩 실행하면 됩니다.
-첫 셀에서 `.env`의 `SMARTRO_VAN_API_KEY`를 불러오지 못하면 이후 요청이 모두 인증 오류(401 등)로 실패합니다.
-`02` 노트북은 `SMARTRO_VAN_TERMID`(단말기번호 10자리)도 필요합니다.
+`van-api/` 안의 노트북을 열어 셀을 하나씩 실행하면 됩니다. 노트북 폴더나 저장소 루트 어디에서 실행해도 `van_test_helpers.py`를 찾습니다.
+`.env`의 `SMARTRO_VAN_API_KEY`를 불러오지 못하면 이후 요청이 모두 인증 오류(401 등)로 실패합니다.
+`02`~`04` 노트북은 `SMARTRO_VAN_TERMID`(단말기번호 10자리)도 필요합니다.
 
 GET 조회만 수행하며 현금영수증 발급·취소 요청은 하지 않습니다.
 
