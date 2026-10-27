@@ -1,6 +1,6 @@
 # 논문 요약 형식
 
-Claude Code로 정리할 때와, 나중에 API 스크립트(`src/generate_summary.py`, 예정)로 정리할 때 모두 이 형식을 쓴다.
+Claude Code로 정리할 때와, API 스크립트(`src/generate_summary.py`)로 정리할 때 모두 이 형식을 쓴다.
 형식을 바꾸려면 이 파일만 고친다.
 
 ## 입력
