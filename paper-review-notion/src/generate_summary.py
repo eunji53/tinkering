@@ -285,7 +285,16 @@ def fix_image_paths(markdown: str, extract_dir: Path) -> tuple[str, list[str]]:
     return fixed, missing
 
 
-def main() -> None:
+def available_summary_path(path: Path) -> Path:
+    """같은 날 같은 모델을 재실행해도 기존 요약과 실행 기록을 보존한다."""
+    candidate, number = path, 2
+    while candidate.exists() or candidate.with_suffix(".json").exists():
+        candidate = path.with_name(f"{path.stem}_{number}{path.suffix}")
+        number += 1
+    return candidate
+
+
+def main(argv: list[str] | None = None) -> Path | None:
     parser = argparse.ArgumentParser(description="추출 결과로 논문 요약 마크다운을 만든다.")
     parser.add_argument("--extract", required=True, help="output/<논문>_extract_<날짜> 폴더")
     parser.add_argument("--provider", choices=list(PROVIDERS), default="openrouter")
@@ -296,13 +305,15 @@ def main() -> None:
     parser.add_argument("--num-ctx", type=int, default=16384, help="ollama 입력 길이(토큰)")
     parser.add_argument("--think", action="store_true", help="ollama 모델의 생각(think) 기능 켜기 (느려짐)")
     parser.add_argument("--dry-run", action="store_true", help="LLM을 호출하지 않고 입력 크기만 확인")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     load_env()
     extract_dir = Path(args.extract).resolve()
     if not (extract_dir / "full_text.md").exists():
         sys.exit(f"추출 결과가 아닙니다: {extract_dir}")
     model = args.model or PROVIDERS[args.provider]["default_model"]
+    if args.max_tokens <= 0 or args.num_ctx <= 0:
+        parser.error("--max-tokens와 --num-ctx는 양수여야 합니다.")
 
     format_doc = FORMAT_PATH.read_text(encoding="utf-8")
     pages = read_pages(extract_dir)
@@ -360,11 +371,15 @@ def main() -> None:
         add_usage(u)
 
     summary = re.sub(r"^```(?:markdown|md)?\s*\n|\n```\s*$", "", summary.strip())
+    if not summary.strip():
+        sys.exit("모델이 빈 요약을 반환했습니다. 결과를 저장하거나 발행하지 않았습니다.")
     summary, missing = fix_image_paths(summary, extract_dir)
 
     stem = extract_dir.name.split("_extract_")[0]
     model_slug = re.sub(r"[^A-Za-z0-9.]+", "-", model).strip("-")
-    out_path = extract_dir.parent / f"{stem}_summary_{args.provider}-{model_slug}_{date.today().isoformat()}.md"
+    out_path = available_summary_path(
+        extract_dir.parent / f"{stem}_summary_{args.provider}-{model_slug}_{date.today().isoformat()}.md"
+    )
     out_path.write_text(summary + "\n", encoding="utf-8")
 
     elapsed = time.time() - started
@@ -387,6 +402,7 @@ def main() -> None:
         print(f"[warn] 출력 한도({args.max_tokens:,} 토큰)에 걸려 요약이 중간에 잘렸습니다. --max-tokens를 늘려 다시 실행하세요.")
     if missing:
         print(f"[warn] 목록에 없는 이미지 경로 {len(missing)}개: {missing[:5]}")
+    return out_path
 
 
 if __name__ == "__main__":

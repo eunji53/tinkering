@@ -48,6 +48,7 @@ META_RE = re.compile(r"^- (저자|기관|공개|링크|태그|Notion):\s*(.*)$")
 URL_RE = re.compile(r"https?://[^\s)>\]]+")
 IMAGE_RE = re.compile(r"^!\[([^\]]*)\]\(<?([^)>]+)>?\)\s*$")
 LIST_RE = re.compile(r"^(\s*)(?:[-*]|(\d+)\.)\s+(.*)$")
+SUMMARY_HEADING_RE = re.compile(r"^##\s+3\s*줄\s*요약\s*$")
 INLINE_RE = re.compile(
     r"\*\*(?P<b1>.+?)\*\*|<b>(?P<b2>.+?)</b>|(?<![\\$])\$(?P<eq>[^$\n]+?)\$|\[(?P<lt>[^\]]+)\]\((?P<lu>[^)\s]+)\)|`(?P<code>[^`]+)`"
 )
@@ -124,6 +125,7 @@ def markdown_to_blocks(lines: list[str], base_dir: Path) -> list[dict]:
     stack: list[list[dict]] = [root]  # 현재 블록을 붙일 목록 (접기 블록 안이면 그 children)
     para: list[str] = []
     list_stack: list[tuple[int, dict]] = []  # (들여쓰기, 목록 블록)
+    in_summary = False
     i = 0
 
     def flush_para() -> None:
@@ -145,6 +147,7 @@ def markdown_to_blocks(lines: list[str], base_dir: Path) -> list[dict]:
         if m:
             flush_para()
             list_stack.clear()
+            in_summary = False
             title = re.sub(r"</?b>", "", m.group(1)).strip()
             level = "heading_2" if title != "자세히 보기" else "heading_3"
             block = text_block(level, title, is_toggleable=True)
@@ -165,6 +168,7 @@ def markdown_to_blocks(lines: list[str], base_dir: Path) -> list[dict]:
         if m:
             flush_para()
             list_stack.clear()
+            in_summary = bool(SUMMARY_HEADING_RE.fullmatch(stripped))
             level = {1: "heading_1", 2: "heading_2", 3: "heading_3"}[len(m.group(1))]
             stack[-1].append(text_block(level, m.group(2)))
             i += 1
@@ -224,6 +228,8 @@ def markdown_to_blocks(lines: list[str], base_dir: Path) -> list[dict]:
 
         list_stack.clear()
         para.append(line)
+        if in_summary:
+            flush_para()  # 목록 기호 없는 세 줄도 한 문단으로 합치지 않는다.
         i += 1
 
     flush_para()
@@ -250,17 +256,27 @@ def parse_summary(md_path: Path) -> tuple[dict, list[str], list[str]]:
 
 
 def three_lines(body: list[str]) -> list[str]:
-    """'## 3줄 요약' 아래 목록 3줄."""
+    """제목 공백 변형과 목록 기호 없는 요약도 원문 그대로 읽는다."""
     out, inside = [], False
     for line in body:
-        if line.startswith("## "):
+        stripped = line.strip()
+        if re.match(r"^#{1,6}\s", stripped):
             if inside:
                 break
-            inside = line.strip() == "## 3줄 요약"
+            inside = bool(SUMMARY_HEADING_RE.fullmatch(stripped))
             continue
+        if not inside or not stripped:
+            continue
+        if stripped.startswith(("<details", "</details", "<!--")):
+            break
         m = LIST_RE.match(line)
-        if inside and m and not m.group(1):
-            out.append(m.group(3))
+        if m:
+            if not m.group(1):
+                out.append(m.group(3))
+        else:
+            out.append(stripped)
+        if len(out) == 3:
+            break
     return out[:3]
 
 
@@ -453,7 +469,7 @@ def fill_uploads(api: Notion, blocks: list[dict]) -> int:
 # ---------- 실행 ----------
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="요약 md를 Notion '논문 리뷰'에 올린다 (기본은 미리보기).")
     parser.add_argument("--summary", required=True, help="output/<논문>_summary_*.md")
     parser.add_argument("--publish", action="store_true", help="실제로 Notion에 올린다")
@@ -461,10 +477,13 @@ def main() -> None:
         "--update-existing", action="store_true", help="같은 제목 페이지가 있으면 '내 메모' 앞 내용만 바꾼다"
     )
     parser.add_argument("--database", help="데이터베이스 ID (생략하면 환경변수 NOTION_DATABASE_ID)")
-    args = parser.parse_args()
+    parser.add_argument("--title-suffix", help="원본 md를 바꾸지 않고 Notion 제목 뒤에 붙일 문구")
+    args = parser.parse_args(argv)
 
     md_path = Path(args.summary).resolve()
     meta, header, body = parse_summary(md_path)
+    if args.title_suffix:
+        meta["title"] = f"{meta['title']} {args.title_suffix}"
     blocks = markdown_to_blocks(header + [""] + body, md_path.parent)
     props = build_properties(meta, body, INITIAL_STATUS)
     problems = validate(blocks)

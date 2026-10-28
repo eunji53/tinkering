@@ -7,6 +7,9 @@
 import sys
 from pathlib import Path
 
+import json
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 import publish_notion as p  # noqa: E402
@@ -122,3 +125,24 @@ def test_split_memo(tmp_path):
     content, memo = p.split_memo(blocks)
     assert p.plain_of(memo[0]) == "내 메모" and len(memo) == 1
     assert len(content) == len(blocks) - 1
+
+
+@pytest.mark.parametrize("heading", ["## 3줄 요약", "## 3 줄 요약"])
+def test_unbulleted_summary_populates_property_and_keeps_lines(tmp_path, heading):
+    lines = ["🚀 첫째 문장.", "💡 둘째 문장.", "📈 셋째 문장."]
+    body = [heading, *lines, "", "<details><summary>자세히 보기</summary>", "별도 본문", "</details>"]
+    assert p.three_lines(body) == lines
+    blocks = p.markdown_to_blocks(body, tmp_path)
+    assert [p.plain_of(b) for b in blocks[1:4]] == lines
+    props = p.build_properties({"title": "Test"}, body, None)
+    assert p.summarize_prop(props["3줄 요약"]) == "\n".join(lines)
+
+
+def test_title_suffix_does_not_rewrite_source(tmp_path):
+    md = tmp_path / "summary.md"
+    md.write_text("# Original title\n\n## 3줄 요약\n1. One.\n2. Two.\n3. Three.\n", encoding="utf-8")
+    before = md.read_bytes()
+    p.main(["--summary", str(md), "--title-suffix", "[비교본: chosen model]"])
+    preview = json.loads((tmp_path / "summary_notion_preview.json").read_text(encoding="utf-8"))
+    assert p.summarize_prop(preview["properties"]["제목"]) == "Original title [비교본: chosen model]"
+    assert md.read_bytes() == before

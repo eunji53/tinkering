@@ -1339,10 +1339,19 @@ def write_report(
     print(f"[report] 리포트 저장 완료 -> {out_dir / 'extraction_report.md'}")
 
 
-def main() -> None:
+def output_path(pdf_path: Path) -> Path:
+    """기존 CLI와 실행기가 공유하는 기본 추출 경로."""
+    stem = pdf_path.stem
+    if len(stem) > 60:
+        stem = stem[:60].rsplit(" ", 1)[0].rstrip(" -_")
+    return PROJECT_DIR / "output" / f"{stem}_extract_{date.today().isoformat()}"
+
+
+def main(argv: list[str] | None = None) -> Path:
     parser = argparse.ArgumentParser(description="PDF에서 텍스트/그림/표를 추출한다.")
     parser.add_argument("--pdf", default=str(PROJECT_DIR / "input" / "LIGHTRAG.pdf"), help="입력 PDF 경로")
-    args = parser.parse_args()
+    parser.add_argument("--output-dir", help="추출 폴더 (생략하면 기존 날짜별 경로)")
+    args = parser.parse_args(argv)
 
     pdf_path = Path(args.pdf).resolve()
     if not pdf_path.exists():
@@ -1350,10 +1359,7 @@ def main() -> None:
 
     # 논문 제목이 긴 파일명은 결과 폴더 경로가 Windows 경로 길이 제한(260자)을 넘길 수 있어서
     # 폴더 이름에는 앞 60자(단어 경계)까지만 쓴다.
-    stem = pdf_path.stem
-    if len(stem) > 60:
-        stem = stem[:60].rsplit(" ", 1)[0].rstrip(" -_")
-    out_dir = PROJECT_DIR / "output" / f"{stem}_extract_{date.today().isoformat()}"
+    out_dir = Path(args.output_dir).resolve() if args.output_dir else output_path(pdf_path)
     out_dir.mkdir(parents=True, exist_ok=True)
 
     doc = fitz.open(pdf_path)
@@ -1365,6 +1371,7 @@ def main() -> None:
     doc.close()
 
     print(f"\n완료. 결과 폴더: {out_dir}")
+    return out_dir
 
 
 if __name__ == "__main__":
